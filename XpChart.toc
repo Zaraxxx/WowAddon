@@ -1,0 +1,12 @@
+## Interface: 11304
+## Title: XP Chart
+## Notes: Shows a chart XP vs /played
+## Author: Zarrar
+## Version: 0.2
+## SavedVariables: XPChartDB
+embeds.xml
+
+GlobalVariables.lua
+MaxXp.lua
+UI.lua
+App.lua
