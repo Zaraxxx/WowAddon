@@ -56,6 +56,7 @@ end
 function UI:Show()
 	UI:Debug("UI:Show");
 	mainWin:SetShown(true);
+	UI:UpdateGraph();
 end
 function UI:Hide()
 	UI:Debug("UI:Hide");
@@ -64,6 +65,7 @@ end
 function UI:Toggle()
 	UI:Debug("UI:Toggle");
 	mainWin:SetShown(not mainWin:IsShown());
+	UI:UpdateGraph();
 end
 function UI:ShowOptions()
 	UI:Debug("UI:Show");
@@ -186,7 +188,7 @@ function UI:InitGraph(win) -- create win.chart
 		
 	local graph = LibStub:GetLibrary("LibGraph-2.0");
 	
-	local g=graph:CreateGraphLine("XpChart-Graph",win,"TOPLEFT","TOPLEFT",	55,			-50,		win:GetWidth()-85,	win:GetHeight()-110)
+	local g=graph:CreateGraphLine("XpChart-Graph",win,"TOPLEFT","TOPLEFT",	55,			-40,		win:GetWidth()-85,	win:GetHeight()-110)
 	g:SetGridColor(GV.defaultPlayedDivisionLineColor)
 	g:SetAxisDrawing(false,false)
 	g:SetAxisColor({1.0,1.0,1.0,1.0})
@@ -198,41 +200,44 @@ function UI:InitGraph(win) -- create win.chart
 end
 
 function UI:UpdateGraph()
-	local MaxWidth , MaxHeight = UI:GetChartMaxAxis();
-	local SpacingWidth = 1;
-	graph.XGridIntervalUnit = " sec"
-	graph.XGridIntervalMultiple = 1
 
-	if MaxWidth > 86400 then
-		SpacingWidth = 86400
-		graph.XGridIntervalMultiple = 1
-		graph.XGridIntervalUnit = " day"
-	elseif MaxWidth > 3600 then
-		SpacingWidth = 3600
-		graph.XGridIntervalMultiple = 1
-		graph.XGridIntervalUnit = " hr"
-	elseif MaxWidth > 600 then
-		SpacingWidth = 600
-		graph.XGridIntervalMultiple = 10
-		graph.XGridIntervalUnit = " min"
-	elseif MaxWidth > 60 then
-		SpacingWidth = 60
-		graph.XGridIntervalMultiple = 1
-		graph.XGridIntervalUnit = " min"
-	elseif MaxWidth > 10 then
-		SpacingWidth = 10
-		graph.XGridIntervalMultiple = 10
+	if mainWin:IsShown() then
+		local MaxWidth , MaxHeight = UI:GetChartMaxAxis();
+		local SpacingWidth = 1;
 		graph.XGridIntervalUnit = " sec"
-	end
+		graph.XGridIntervalMultiple = 1
 
-	local SpacingHeight = MaxHeight * 1.5; 	
-	
-	graph:SetYAxis(0,MaxHeight)
-	graph:SetXAxis(0,MaxWidth)	
-	graph:SetGridSpacing(SpacingWidth, SpacingHeight) 	
-	graph:ResetData()
-	self:DrawAllLevelLines(MaxHeight, MaxWidth);
-	self:DrawPlayerLines();
+		if MaxWidth > 86400 then
+			SpacingWidth = 86400
+			graph.XGridIntervalMultiple = 1
+			graph.XGridIntervalUnit = " day"
+		elseif MaxWidth > 3600 then
+			SpacingWidth = 3600
+			graph.XGridIntervalMultiple = 1
+			graph.XGridIntervalUnit = " hr"
+		elseif MaxWidth > 600 then
+			SpacingWidth = 600
+			graph.XGridIntervalMultiple = 10
+			graph.XGridIntervalUnit = " min"
+		elseif MaxWidth > 60 then
+			SpacingWidth = 60
+			graph.XGridIntervalMultiple = 1
+			graph.XGridIntervalUnit = " min"
+		elseif MaxWidth > 10 then
+			SpacingWidth = 10
+			graph.XGridIntervalMultiple = 10
+			graph.XGridIntervalUnit = " sec"
+		end
+
+		local SpacingHeight = MaxHeight * 1.5; 	
+		
+		graph:SetYAxis(1,MaxHeight)
+		graph:SetXAxis(1,MaxWidth)	
+		graph:SetGridSpacing(SpacingWidth, SpacingHeight) 	
+		graph:ResetData()
+		self:DrawAllLevelLines(MaxHeight, MaxWidth);
+		self:DrawPlayerLines();
+	end
 end
 
 function UI:DrawPlayerLines() 
@@ -254,7 +259,6 @@ end
 
 
 function UI:DrawAllLevelLines(maxHeight, maxWidth) 	
-
 	local maxLvlToShow = 1
 	
 	--Reset Labels
@@ -267,25 +271,33 @@ function UI:DrawAllLevelLines(maxHeight, maxWidth)
 	end
 	
 	-- Find max line
-	for i=1,60,1 do	
+	for i=2,60,1 do	
 		maxLvlToShow = i
-		local lineLvl = MaxXP:GetTotalMaxXp(i)
+		--print ("maxXpToShow " .. i)
+		local lineLvl  = MaxXP:GetTotalMaxXp(i)
 		if lineLvl > maxHeight then
 			break
 		end
 	end
+	
+	--print("maxLvlToShow " .. maxLvlToShow)
 	-- only show labels for the last 10 levels
-	for i=1,maxLvlToShow,1 do	
-		if i==10 or i==20 or i==30 or i==40 or i==50 or (i >= maxLvlToShow - 10 ) then
-			local lineLvl = MaxXP:GetTotalMaxXp(i)
-			local data={{1,lineLvl},{maxWidth,lineLvl}}
-			local lineColor = GV.defaultLevelDivisionLineColor
-			graph:AddDataSeries(data,lineColor)
+	for i=2,maxLvlToShow,1 do	
+	
+		local lineLvl = MaxXP:GetTotalMaxXp(i -1)
+		local data={{1,lineLvl},{maxWidth,lineLvl}}
+		local lineColor = GV.defaultLevelDivisionLineColor
+		graph:AddDataSeries(data,lineColor)
+
+		if i==10 or i==20 or i==25 or i==30 or i==35 or i==40 or i==45 or i==50 or i==55 or (i >= maxLvlToShow - 10 ) then
+		--if i==53  then
 			
+			--print("drawing line " .. i .. "   " .. lineLvl) 
 			local YPosLbl = (lineLvl * graph:GetHeight()) / (graph.YMax-graph.YMin)	
 			YLabels[i]:SetFontObject("GameFontHighlightSmall");
 			YLabels[i]:SetPoint("LEFT", graph, "BOTTOMLEFT", -40, YPosLbl);
 			YLabels[i]:SetText("Lvl " .. i);
+			--YLabels[i]:SetText("Lvl " .. i .. " (" .. lineLvl .. ")");
 			YLabels[i]:Show()
 		end
 	end
@@ -309,7 +321,10 @@ function UI:GetChartMaxAxis()
 	local maxXpToShow = 1;	
 	for i=1,60 do 
 		maxXpToShow = MaxXP:GetTotalMaxXp(i);
+		--print("maxXp2 = " .. maxXp)
+		--print("maxXpToShow2 = " .. maxXpToShow)
 		if maxXpToShow > maxXp then
+		
 			break
 		end
 	end

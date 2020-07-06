@@ -1358,7 +1358,7 @@ function GraphFunctions:CreateGridlines()
 					F:ClearAllPoints()
 					F:SetPoint("TOP",T,"BOTTOM",0,-5)
 					F:SetText((i * self.XGridIntervalMultiple) .. self.XGridIntervalUnit)
-					F:Show()
+					--F:Show()
 				end
 			end
 		end

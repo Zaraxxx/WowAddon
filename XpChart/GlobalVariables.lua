@@ -34,5 +34,5 @@ GV.resetDBOnLogin = false;
 GV.MainWinWidth = UIParent:GetWidth() - 500;
 GV.MainWinHeight = UIParent:GetHeight() - 300;
 
-GV.OptionWinWidth = 400;
-GV.OptionWinHeight = 600;
+GV.OptionWinWidth = 300;
+GV.OptionWinHeight = 400;
