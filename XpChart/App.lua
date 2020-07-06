@@ -30,7 +30,15 @@ local commands = {
 	["hide"] = UI.Hide, 
 	["toggle"] = UI.Toggle, 
 	["options"] = UI.ShowOptions, 
-	["debug"] = function() GV.debug = not GV.debug end, 	
+	["debug"] = function() 
+		GV.debug = not GV.debug;
+		if GV.debug == true then
+			UI:Print("Debug on")
+		else
+			UI:Print("Debug off")	
+		end			
+		AP:CheckAllPlayerPoints();
+		end, 	
 	["help"] = function()
 		print(" ");
 		UI:Print("List of commands:");
@@ -204,11 +212,13 @@ function App:OnEnable()
     -- Called when the addon is enabled
 
 	self:RegisterEvent("TIME_PLAYED_MSG")
+	
+	self:RegisterEvent("QUEST_COMPLETE")
 	--self:RegisterEvent("PLAYER_REGEN_DISABLED", "OnStartCombat")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnEndCombat")
 	self:RegisterEvent("PLAYER_LOGOUT")
 
-	self:ScheduleRepeatingTimer("CustomRequestTimePlayed", 60)
+	self:ScheduleRepeatingTimer("CustomRequestTimePlayed", GV.RecordTimer)
 	
 	self:Debug("App:OnEnable - End")
 end
@@ -217,15 +227,12 @@ function App:OnDisable()
 	self:Debug("App:OnDisable - Start")
 	self:Debug("App:OnDisable - End")
 end
-function App:ADDON_LOADED(event, args)
-	--print("App:ADDON_LOADED") 
-	-- self:Debug("ADDON_LOADED ? " .. args);
-	-- if event == "ADDON_LOADED" and args == "XpChart" then
-		-- self:Debug("ADDON_LOADED");
-	-- end
-end
 function App:PLAYER_LOGOUT(sender, args)
 	XPChartDB = AP.DB;
+end
+function App:QUEST_COMPLETE(sender, args)
+	self:Debug("App:QUEST_COMPLETE");
+	self:CustomRequestTimePlayed();
 end
 function App:TIME_PLAYED_MSG(msg, seconds_played)
 	--App:CustomRequestTimePlayed();
@@ -241,14 +248,17 @@ function App:OnEndCombat(sender, args)
 end
 function App:RecordGraphPoint(seconds_played)
 	self:Debug("RecordGraphPoint ".. seconds_played)
-
+	
 	local playerName = UnitName("player");
 	local lvl = UnitLevel("player");
 	local totalXp = UnitXP("player") + MaxXP:GetTotalMaxXp(lvl - 1);
 	
-	local p = AP:GetPlayer(playerName);	
+	local p = AP:GetPlayer(playerName);
 	if #p.points > 2 then 
-		-- check last point
+		-- if the previous point had more xp, don't record
+		if p.points[#p.points].xp > totalXp then
+			return
+		end	
 		if p.points[#p.points].xp == totalXp and p.points[#p.points - 1].xp == totalXp then
 			p.points[#p.points].played = seconds_played;
 		else
@@ -267,7 +277,35 @@ function App:Debug(txt)
 		print(txt);
 	end
 end
-
+function AP:CheckAllPlayerPoints()
+	for i=1,#AP.DB.players do 
+		local p = AP.DB.players[i]
+		self:CheckPlayerPoints(p);
+	end
+end
+function AP:CheckPlayerPoints(p)
+	local maxXp = 0;
+	local maxPlayed = 0;
+	for i = 1, #p.points, 1 do
+		if p.points[i].xp > maxXp then
+			maxXp = p.points[i].xp 
+		elseif p.points[i].xp < maxXp then
+			App:Debug("------------------------")
+			App:Debug("Point Error : xp < maxXp")
+			App:Debug("Character: " .. p.name)
+			App:Debug("point number: " .. tostring(i))			
+		end
+		if p.points[i].played > maxPlayed then
+			maxPlayed = p.points[i].played
+		elseif p.points[i].played > maxPlayed then
+			App:Debug("------------------------")
+			App:Debug("Point Error : played < maxPlayed")
+			App:Debug("Character: " .. p.name)
+			App:Debug("point number: " .. tostring(i))			
+			App:Debug("------------------------")
+		end
+	end
+end
 
 do -- Time Played functions closure
 	local requesting

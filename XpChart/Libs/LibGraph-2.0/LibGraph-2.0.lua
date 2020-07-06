@@ -276,6 +276,9 @@ function lib:CreateGraphLine(name,parent,relative,relativeTo,offsetX,offsetY,Wid
 	graph.AxisColor={1.0,1.0,1.0,1.0}
 	graph.GridColor={0.5,0.5,0.5,0.5}
 	graph.XGridInterval=0.25
+	graph.XGridIntervalUnit = " x"
+	graph.XGridIntervalMultiple = 1
+	
 	graph.YGridInterval=0.25
 	graph.XAxisDrawn=true
 	graph.YAxisDrawn=true
@@ -1334,15 +1337,28 @@ function GraphFunctions:CreateGridlines()
 		LowerXGridLine=math_max(math_floor(LowerXGridLine),math_ceil(LowerXGridLine))
 		UpperXGridLine=self.XMax/self.XGridInterval
 		UpperXGridLine=math_min(math_floor(UpperXGridLine),math_ceil(UpperXGridLine))
+		
+		RightSpace=Width*(1-(UpperXGridLine*self.XGridInterval-self.XMin)/(self.XMax-self.XMin))
 
 		for i=LowerXGridLine,UpperXGridLine do
 			if i~=0 or not self.XAxisDrawn then
-				local XPos
+				local XPos, T
 				XPos=Width*(i*self.XGridInterval-self.XMin)/(self.XMax-self.XMin)
 				if NoSecondary or math_fmod(i,self.GridSecondaryX)==0 then
-					self:DrawLine(self,XPos,0,XPos,Height,24,self.GridColor,"BACKGROUND")
+					T = self:DrawLine(self,XPos,0,XPos,Height,24,self.GridColor,"BACKGROUND")
 				else
-					self:DrawLine(self,XPos,0,XPos,Height,24,self.GridColorSecondary,"BACKGROUND")
+					T = self:DrawLine(self,XPos,0,XPos,Height,24,self.GridColorSecondary,"BACKGROUND")
+				end
+				
+				-- XPChart Tests
+				if ((i~=UpperXGridLine) or (RightSpace>12)) and (NoSecondary or math_fmod(i,self.GridSecondaryX)==0) and i > 0 then
+					F=self:FindFontString()
+					F:SetFontObject("GameFontHighlightSmall")
+					F:SetTextColor(1,1,1)
+					F:ClearAllPoints()
+					F:SetPoint("TOP",T,"BOTTOM",0,-5)
+					F:SetText((i * self.XGridIntervalMultiple) .. self.XGridIntervalUnit)
+					F:Show()
 				end
 			end
 		end

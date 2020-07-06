@@ -11,6 +11,7 @@ local graph;
 local mainWin;
 local optionWin;
 
+local YLabels = {}
 --------------------------------------
 -- Functions
 --------------------------------------
@@ -158,8 +159,6 @@ function UI:CreateMainWindow()
 	win.title:SetPoint("LEFT", win.TitleBg, "LEFT", 5, 0);
 	win.title:SetText("Xp Chart");
 
-
-	
 	-- Buttons
 	win.optionsBtn = CreateFrame("Button", nil, win, "GameMenuButtonTemplate" );
 	win.optionsBtn:SetSize(100, 30);
@@ -170,23 +169,12 @@ function UI:CreateMainWindow()
 	win.optionsBtn:SetHighlightFontObject("GameFontHighlight");
 	win.optionsBtn:SetScript("OnClick", function(self, arg1) UI:ShowOptions() end);
 	
-	
 	win:SetMovable(true)
 	win:EnableMouse(true)
 	win:RegisterForDrag("LeftButton")
 	win:SetScript("OnDragStart", win.StartMoving)
 	win:SetScript("OnDragStop", win.StopMovingOrSizing)
-	
 
-	--win.optionsBtn:SetNormalFontObject("GameFontNormalLarge");
-	--win.optionsBtn:SetHighlightFontObject("GameFontHighlightLarge");
-
-	-- -- CheckButtons
-	-- win.checkbtn1 =  CreateFrame("CheckButton", nil, win, "UICheckButtonTemplate" );
-	-- win.checkbtn1:SetPoint("TOPRIGHT", win, "TOPRIGHT", -100,-40);
-	-- win.checkbtn1.text:SetText("Player 1");
-	--win.checkbtn1:SetChecked(true);
-	
 	win:SetFrameLevel(10)
 	win:Hide();
 	
@@ -198,36 +186,11 @@ function UI:InitGraph(win) -- create win.chart
 		
 	local graph = LibStub:GetLibrary("LibGraph-2.0");
 	
-	--graph:TestGraph2Lib();
-	
-	-- Graph 
-	
-	---- Levels axis
-	--win.lblLvl20 = win:CreateFontString(nil, "OVERLAY");
-	--win.lblLvl20:SetFontObject("GameFontHighlight");
-	--win.lblLvl20:SetPoint("LEFT", win, "TOPLEFT", 20, -350);
-	--win.lblLvl20:SetText("lvl 20");
-
-				--CreateGraphLine(name,			parent,relative,relativeTo,	offsetX,	offsetY,	Width,					Height)
-	local g=graph:CreateGraphLine("XpChart-Graph",win,"TOPLEFT","TOPLEFT",	45,			-20,		win:GetWidth()-50,	win:GetHeight()-25)
-	--local g=graph:CreateGraphScatterPlot("XpChart-Graph",win,"TOPLEFT","TOPLEFT",	45,			-20,		win:GetWidth()-50,	win:GetHeight()-25)
-	
-	--g:SetGridColor({0,0,0,0.0})
-	g:SetGridColor({1.0,1.0,1.0,0.05})
+	local g=graph:CreateGraphLine("XpChart-Graph",win,"TOPLEFT","TOPLEFT",	55,			-50,		win:GetWidth()-85,	win:GetHeight()-110)
+	g:SetGridColor(GV.defaultPlayedDivisionLineColor)
 	g:SetAxisDrawing(false,false)
 	g:SetAxisColor({1.0,1.0,1.0,1.0})
 	g:SetYLabels(true, false)
-
-	--g:SetGridSecondaryMultiple(1,1);
-	--g:SetAxisDrawing(true, true)
-	--g:SetAutoScale(true)
-	--g:AddBar(2) 
-	
-	--g:CreateGridlines();
-
-	--g:AddDataSeries(stuff.p, stuff.c)
-	--g:TestLineGraph();
-
 
 	self:Debug("UI:CreateChart - End");
 	
@@ -235,17 +198,40 @@ function UI:InitGraph(win) -- create win.chart
 end
 
 function UI:UpdateGraph()
-	local playerLvl = UnitLevel("player");
-	local totalMaxXp = MaxXP:GetTotalMaxXp(playerLvl);
-	local MaxWidth = UI:GetChartMaxWidth();
-	local MaxHeight = totalMaxXp * 1;	
-	local SpacingWidth = MaxWidth/10; 
-	local SpacingHeight = MaxHeight/10; 	
+	local MaxWidth , MaxHeight = UI:GetChartMaxAxis();
+	local SpacingWidth = 1;
+	graph.XGridIntervalUnit = " sec"
+	graph.XGridIntervalMultiple = 1
+
+	if MaxWidth > 86400 then
+		SpacingWidth = 86400
+		graph.XGridIntervalMultiple = 1
+		graph.XGridIntervalUnit = " day"
+	elseif MaxWidth > 3600 then
+		SpacingWidth = 3600
+		graph.XGridIntervalMultiple = 1
+		graph.XGridIntervalUnit = " hr"
+	elseif MaxWidth > 600 then
+		SpacingWidth = 600
+		graph.XGridIntervalMultiple = 10
+		graph.XGridIntervalUnit = " min"
+	elseif MaxWidth > 60 then
+		SpacingWidth = 60
+		graph.XGridIntervalMultiple = 1
+		graph.XGridIntervalUnit = " min"
+	elseif MaxWidth > 10 then
+		SpacingWidth = 10
+		graph.XGridIntervalMultiple = 10
+		graph.XGridIntervalUnit = " sec"
+	end
+
+	local SpacingHeight = MaxHeight * 1.5; 	
+	
 	graph:SetYAxis(0,MaxHeight)
 	graph:SetXAxis(0,MaxWidth)	
 	graph:SetGridSpacing(SpacingWidth, SpacingHeight) 	
 	graph:ResetData()
-	self:DrawAllLevelLines(playerLvl, MaxWidth);
+	self:DrawAllLevelLines(MaxHeight, MaxWidth);
 	self:DrawPlayerLines();
 end
 
@@ -267,34 +253,67 @@ function UI:DrawPlayerLines()
 end
 
 
-function UI:DrawAllLevelLines(maxLevel, maxWidth) 
-	for i=1,maxLevel,1 do 
-		 UI:DrawLevelLine(i, maxWidth)
+function UI:DrawAllLevelLines(maxHeight, maxWidth) 	
+
+	local maxLvlToShow = 1
+	
+	--Reset Labels
+	for i=1,60,1 do	
+		if YLabels[i] == nil then
+			YLabels[i]= graph:CreateFontString(nil, "OVERLAY");
+		end		
+		YLabels[i]:ClearAllPoints()
+		YLabels[i]:Hide()
+	end
+	
+	-- Find max line
+	for i=1,60,1 do	
+		maxLvlToShow = i
+		local lineLvl = MaxXP:GetTotalMaxXp(i)
+		if lineLvl > maxHeight then
+			break
+		end
+	end
+	-- only show labels for the last 10 levels
+	for i=1,maxLvlToShow,1 do	
+		if i==10 or i==20 or i==30 or i==40 or i==50 or (i >= maxLvlToShow - 10 ) then
+			local lineLvl = MaxXP:GetTotalMaxXp(i)
+			local data={{1,lineLvl},{maxWidth,lineLvl}}
+			local lineColor = GV.defaultLevelDivisionLineColor
+			graph:AddDataSeries(data,lineColor)
+			
+			local YPosLbl = (lineLvl * graph:GetHeight()) / (graph.YMax-graph.YMin)	
+			YLabels[i]:SetFontObject("GameFontHighlightSmall");
+			YLabels[i]:SetPoint("LEFT", graph, "BOTTOMLEFT", -40, YPosLbl);
+			YLabels[i]:SetText("Lvl " .. i);
+			YLabels[i]:Show()
+		end
 	end
 end
 
-function UI:DrawLevelLine(lvl, maxWidth)
-	local lineLvl = MaxXP:GetTotalMaxXp(lvl)	
-	local data={{1,lineLvl},{maxWidth,lineLvl}}
-	local lineColor = GV.defaultLevelLineColor
-	graph:AddDataSeries(data,lineColor)
-end
 
-function UI:GetChartMaxWidth() -- Width
+function UI:GetChartMaxAxis() 
+	local maxXp = 1;
 	local maxPlayed = 1;
 	for i=1,#AP.DB.players do 
 		local p = AP.DB.players[i]
-		if p.selected == true then
-			for y=1,#p.points do
-				if p.points[y].played > maxPlayed then
-					maxPlayed = p.points[y].played
-				end
+		if p.selected == true and #p.points > 1 then
+			if p.points[#p.points].played > maxPlayed then
+				maxPlayed = p.points[#p.points].played
+			end		
+			if p.points[#p.points].xp > maxXp then
+				maxXp = p.points[#p.points].xp
 			end
 		end
 	end
-	return maxPlayed * 1.1 ;	
+	local maxXpToShow = 1;	
+	for i=1,60 do 
+		maxXpToShow = MaxXP:GetTotalMaxXp(i);
+		if maxXpToShow > maxXp then
+			break
+		end
+	end
+	
+	return maxPlayed * 1.03 , maxXpToShow * 1.03;	
 end
-
-
-
 

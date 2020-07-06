@@ -15,7 +15,11 @@ GV.printTheme= {
 }
 
 GV.defaultPlayerLineColor = {1.0,1.0,1.0,1.0}
-GV.defaultLevelLineColor = {1.0,1.0,1.0,0.1}
+
+GV.defaultLevelDivisionLineColor = {1.0,1.0,1.0,0.1}
+GV.defaultPlayedDivisionLineColor = {1.0,1.0,1.0,0.1}
+
+GV.RecordTimer = 5
 
 GV.defaultsDB = {
 	  profile = {

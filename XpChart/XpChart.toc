@@ -2,7 +2,7 @@
 ## Title: XP Chart
 ## Notes: Shows a chart XP vs /played
 ## Author: Zarrar
-## Version: 0.2
+## Version: 0.3
 ## SavedVariables: XPChartDB
 embeds.xml
 
